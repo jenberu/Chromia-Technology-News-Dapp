@@ -6,14 +6,37 @@ entity user {
 }
 entity post{
     timestamp=op_context.last_block_time;
+    index user;
+
     content:text;
-   index user;
   
-}
+}  
 entity follower{
     index user;  //reating a one-to-many relationship because a user can have multiple followers
     index follower:user;
-    key úser,follower; /*This combined key ensures that each 
+    key   user, follower; /*This combined key ensures that each 
                      user can follow another user 
                    only once, maintaining the uniqueness of the follower relationship.*/
+}
+operation  create_user (name,pubkey) {
+    //insert to user intity
+    create user(name,pubkey);// ==>create user( name = name, id = pubkey );
+}
+operation make_post(user_id:byte_array,content:text){
+    val user= user @ {.id==user_id};
+    create post(user,content);
+}
+operation follow_user(user_id:byte_array,folow_id:byte_array){
+    val user= user @ {user_id};
+    val follow = user @{folow_id};
+    create follower (user=follow,
+                      follower=user);
+}
+operation unfollow_user(user_id:byte_array,unfollow_id:byte_array){
+    val user=user @{user_id};
+    val unfollow=user @{unfollow_id};
+    delete follower @? {.user==unfollow,.follower==user};
+}
+query get_user_name(user_id: byte_array): text {
+  return user @ { user_id } ("%s#%s".format(.name, .id.to_hex().sub(0, 5)));
 }

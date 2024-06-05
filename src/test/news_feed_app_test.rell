@@ -1,3 +1,33 @@
 @test module;
 
 import main.*;
+// use two public keys, alice and bob from the Rell test framework as user IDs.
+val alice = rell.test.pubkeys.alice;
+val bob = rell.test.pubkeys.bob;
+
+function test_create_entities() {
+    // Test the creation of two users: Alice and Bob
+    rell.test.tx()
+        .op(create_user("Alice", alice))
+        .op(create_user("Bob", bob))
+        .run();
+
+    // Check if there are two users in the user table
+    assert_equals(user @ { } (@sum 1), 2);
+
+    // Alice follows Bob and makes a post
+    rell.test.tx()
+        .op(follow_user(alice, bob))
+        .op(make_post(alice, "My post"))
+        .run();
+
+    // Check if there is one follower and one post
+    assert_equals(follower @ { } (@sum 1), 1);
+    assert_equals(post @ { } (@sum 1), 1);
+
+    // Alice unfollows Bob and no followers should now exist
+        rell.test.tx()
+        .op(unfollow_user(alice, bob))
+        .run();
+    assert_equals(follower @ { } (@sum 1), 0);
+}
