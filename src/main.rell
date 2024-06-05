@@ -1,0 +1,19 @@
+module;
+entity user {
+    mutable name;//name is an alias for the text datatype.
+
+    key id:byte_array;
+}
+entity post{
+    timestamp=op_context.last_block_time;
+    content:text;
+   index user;
+  
+}
+entity follower{
+    index user;  //reating a one-to-many relationship because a user can have multiple followers
+    index follower:user;
+    key úser,follower; /*This combined key ensures that each 
+                     user can follow another user 
+                   only once, maintaining the uniqueness of the follower relationship.*/
+}

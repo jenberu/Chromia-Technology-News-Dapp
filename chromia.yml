@@ -1,0 +1,10 @@
+blockchains:
+  news_feed_app:
+    module: main
+compile:
+  rellVersion: 0.13.5
+database:
+  schema: schema_news_feed_app
+test:
+  modules:
+    - test
