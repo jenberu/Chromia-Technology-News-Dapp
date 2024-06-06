@@ -34,7 +34,7 @@ operation follow_user(user_id:byte_array,folow_id:byte_array){
 }
 operation unfollow_user(user_id:byte_array,unfollow_id:byte_array){
     val user=user @{user_id};
-    val unfollow=user @{unfollow_id};
+    val unfollow= user @{unfollow_id};
     delete follower @? {.user==unfollow,.follower==user};
 }
 query get_user_name(user_id: byte_array): text {
