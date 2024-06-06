@@ -18,25 +18,89 @@ entity follower{
                      user can follow another user 
                    only once, maintaining the uniqueness of the follower relationship.*/
 }
+
+//check the user is registored 
+function require_is_signer(pubkey) = require(op_context.is_signer(pubkey), "User must sign this operation");
+function require_user(id: byte_array) = require(user @? { id }, "User with id %b does not exist".format(id));
+
 operation  create_user (name,pubkey) {
     //insert to user intity
     create user(name,pubkey);// ==>create user( name = name, id = pubkey );
 }
 operation make_post(user_id:byte_array,content:text){
+    require_is_signer(user_id);
+    require(content.size() <= 10, "A post cannot be longer than 255 letters");
+
     val user= user @ {.id==user_id};
     create post(user,content);
 }
 operation follow_user(user_id:byte_array,folow_id:byte_array){
+    require_is_signer(user_id);
     val user= user @ {user_id};
     val follow = user @{folow_id};
     create follower (user=follow,
                       follower=user);
 }
 operation unfollow_user(user_id:byte_array,unfollow_id:byte_array){
+    require_is_signer(user_id);
     val user=user @{user_id};
     val unfollow= user @{unfollow_id};
     delete follower @? {.user==unfollow,.follower==user};
 }
 query get_user_name(user_id: byte_array): text {
   return user @ { user_id } ("%s#%s".format(.name, .id.to_hex().sub(0, 5)));
+  /* this query finds a user and formats a text by 
+  concatenating the name and the first five letters of 
+  the hex representation of the ID. Next, we'll create two queries to count followers and those a user follows.  */
+}
+query get_followers_count(user_id: byte_array): integer {
+    require_user(user_id);
+  return follower @ { .user == user @ { user_id } } (@sum 1);
+}
+
+query get_following_count(user_id: byte_array): integer {
+    require_user(user_id);
+  return follower @ { .follower == user @ { user_id } } (@sum 1);
+
+}
+//check some that follow others 
+query is_following(my_id: byte_array, your_id: byte_array) =
+  exists(follower @? { .user.id == your_id, .follower.id == my_id });
+
+
+  struct post_dto {
+      timestamp;
+      user:struct<user>;//struct<T> is an in-memory representation of an entity
+      content:text;
+  }
+  query get_posts(
+  user_id: byte_array,
+  pointer: integer,
+  n_posts: integer
+): (pointer: integer, posts: list<post_dto>)
+ {
+  val posts = (user, follower, post) @* {
+    user.id == user_id,
+    follower.follower == user,
+    post.user == follower.user
+  } (
+    @sort_desc @omit post.rowid,
+    post_dto(
+        post.timestamp,
+        post.content,
+        user = post.user.to_struct()
+    )
+  ) offset pointer limit n_posts;
+
+  return (
+    pointer = pointer + posts.size(),
+    posts = posts
+  );
+}
+query get_users(pointer: integer, n_users: integer) {
+  val users = user @* {} (name = "%s#%s".format(.name, .id.to_hex().sub(0, 5)), id = .id) offset pointer limit n_users;
+  return (
+    pointer = pointer + users.size(),
+    users = users
+  );
 }
