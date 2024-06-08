@@ -12,7 +12,7 @@ entity post{
   
 }  
 entity follower{
-    index user;  //reating a one-to-many relationship because a user can have multiple followers
+    index user;  //creating a one-to-many relationship because a user can have multiple followers
     index follower:user;
     key   user, follower; /*This combined key ensures that each 
                      user can follow another user 
@@ -24,12 +24,12 @@ function require_is_signer(pubkey) = require(op_context.is_signer(pubkey), "User
 function require_user(id: byte_array) = require(user @? { id }, "User with id %b does not exist".format(id));
 
 operation  create_user (name,pubkey) {
-    //insert to user intity
+    //insert to user entity
     create user(name,pubkey);// ==>create user( name = name, id = pubkey );
 }
 operation make_post(user_id:byte_array,content:text){
     require_is_signer(user_id);
-    require(content.size() <= 10, "A post cannot be longer than 255 letters");
+    require(content.size() <= 255, "A post cannot be longer than 255 letters");
 
     val user= user @ {.id==user_id};
     create post(user,content);
